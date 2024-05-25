@@ -150,7 +150,7 @@ const handleCommand = (command) => {
   .el-aside {
     background-color: #232323;
 
-    &__logo {
+    .el-aside__logo {
       height: 120px;
       background: url('@/assets/logo.png') no-repeat center / 120px auto;
     }
