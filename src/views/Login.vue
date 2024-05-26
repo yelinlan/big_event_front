@@ -1,18 +1,33 @@
 <script setup>
-import {Lock, User} from "@element-plus/icons-vue"
+import {Key, Lock, User} from "@element-plus/icons-vue"
 import {ref} from "vue";
-import {userLoginService, userRegisterService} from "@/api/user.js";
+import {userCaptchaService, userLoginService, userPublicKeyService, userRegisterService} from "@/api/user.js";
 import {ElMessage} from 'element-plus'
 import {useRouter} from "vue-router";
 import {useTokenStore} from "@/stores/token.js";
+import JSEncrypt from "jsencrypt";
 
 const isRegister = ref(false);
-
 let registerData = ref({
   username: "",
   password: "",
-  rePassword: ""
+  rePassword: "",
+  code: ""
 });
+
+const captcha = ref('');
+const code = ref('');
+
+const userCaptcha = async () => {
+  let result = await userCaptchaService();
+  captcha.value = result.data
+}
+
+userCaptcha();
+
+const flushCaptcha = () => {
+  userCaptcha()
+}
 
 const checkRePassword = (rule, value, callback) => {
   if (value === "") {
@@ -33,28 +48,50 @@ let rules = ref({
     {required: true, message: "请输入密码", trigger: "blur"},
     {min: 5, max: 16, message: "长度为5-16位非空字符", trigger: "blur"}
   ],
+  code: [
+    {required: true, message: "请输入验证码", trigger: "blur"},
+    {min: 5, max: 5, message: "长度为5位非空字符", trigger: "blur"}
+  ],
   rePassword: [{
     validator: checkRePassword, trigger: "blur"
   }]
 });
 
-const register = async () => {
-  if (registerData.value.rePassword !== registerData.value.password) {
-    ElMessage.error("两次密码不一致")
-    return;
-  }
-  let result = await userRegisterService(registerData.value);
-  ElMessage.success(result.message ? result.message : "注册成功")
-  isRegister.value = false;
+const register = async (formEl) => {
+  if (!formEl) return
+  await formEl.validate(async (valid, fields) => {
+    if (valid) {
+      let result = await userRegisterService(registerData.value);
+      ElMessage.success(result.message ? result.message : "注册成功")
+      isRegister.value = false;
+    }
+  })
 }
 
 let router = useRouter()
 let tokenStore = useTokenStore();
-const login = async () => {
-  let result = await userLoginService(registerData.value);
-  ElMessage.success(result.message ? result.message : "登录成功")
-  tokenStore.setToken(result.data)
-  await router.push("/")
+const loginForm = ref()
+const registerForm = ref()
+const login = async (formEl) => {
+  if (!formEl) return
+  await formEl.validate(async (valid, fields) => {
+    if (valid) {
+      let publicKey = await userPublicKeyService(registerData.value.username);
+      if (publicKey.code === 0) {
+        const jsEncrypt = new JSEncrypt();
+        jsEncrypt.setPublicKey(publicKey.data);
+        const pwd = jsEncrypt.encrypt(registerData.value.password);
+        let result = await userLoginService({
+          username: registerData.value.username,
+          password: pwd,
+          code: registerData.value.code
+        });
+        ElMessage.success(result.message ? result.message : "登录成功")
+        tokenStore.setToken(result.data)
+        await router.push("/")
+      }
+    }
+  })
 }
 
 const clear = () => {
@@ -72,7 +109,7 @@ const clear = () => {
     <el-col :span="12" class="bg"></el-col>
     <el-col :span="6" :offset="3" class="form">
       <!-- 注册表单 -->
-      <el-form ref="form" size="large" autocomplete="on" v-if="isRegister" :model="registerData" :rules="rules">
+      <el-form ref="registerForm" size="large" autocomplete="on" v-if="isRegister" :model="registerData" :rules="rules">
         <el-form-item>
           <h1>注册</h1>
         </el-form-item>
@@ -90,7 +127,7 @@ const clear = () => {
         </el-form-item>
         <!-- 注册按钮 -->
         <el-form-item>
-          <el-button class="button" type="primary" auto-insert-space @click="register">
+          <el-button class="button" type="primary" auto-insert-space @click="register(registerForm)">
             注册
           </el-button>
         </el-form-item>
@@ -102,7 +139,7 @@ const clear = () => {
       </el-form>
 
       <!-- 登录表单 -->
-      <el-form ref="form" size="large" autocomplete="off" :model="registerData" :rules="rules" v-else>
+      <el-form ref="loginForm" size="large" autocomplete="off" :model="registerData" :rules="rules" v-else>
         <el-form-item>
           <h1>登录</h1>
         </el-form-item>
@@ -114,6 +151,14 @@ const clear = () => {
                     v-model="registerData.password"
           ></el-input>
         </el-form-item>
+        <el-form-item prop="code" class="flex">
+          <div class="flex">
+            <el-input name="code" :prefix-icon="Key" type="text" placeholder="请输入验证码"
+                      v-model="registerData.code" style="width: 50%"
+            ></el-input>
+            <el-image style="width: 40%" :src="captcha" @click="flushCaptcha"/>
+          </div>
+        </el-form-item>
         <el-form-item class="flex">
           <div class="flex">
             <el-checkbox>记住我</el-checkbox>
@@ -122,7 +167,7 @@ const clear = () => {
         </el-form-item>
         <!-- 登录按钮 -->
         <el-form-item>
-          <el-button class="button" type="primary" auto-insert-space @click="login">
+          <el-button class="button" type="primary" auto-insert-space @click="login(loginForm)">
             登录
           </el-button>
         </el-form-item>
