@@ -32,10 +32,10 @@ export const userUpdateAvatarService = (params) => {
 export const userUpdatePwdService = (params) => {
     return request.patch('user/updatePwd', params)
 }
-export const userCaptchaService = () => {
-    return request.get('user/captcha')
+export const userCaptchaService = (randKey) => {
+    return request.get('user/captcha?randKey='+randKey)
 }
 
-export const userPublicKeyService = (username) => {
-    return request.get('user/rsa?username='+username)
+export const userPublicKeyService = (randKey) => {
+    return request.get('user/rsa?randKey='+randKey)
 }

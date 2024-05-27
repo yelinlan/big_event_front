@@ -18,6 +18,7 @@
     "pinia": "^2.1.7",
     "pinia-persistedstate-plugin": "^0.1.0",
     "qs": "^6.12.1",
+    "snowflake-id": "^1.1.0",
     "vue": "^3.4.21",
     "vue-quill": "^1.5.1",
     "vue-router": "^4.3.2"

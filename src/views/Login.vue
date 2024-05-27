@@ -6,20 +6,22 @@ import {ElMessage} from 'element-plus'
 import {useRouter} from "vue-router";
 import {useTokenStore} from "@/stores/token.js";
 import JSEncrypt from "jsencrypt";
+import {snowflake} from "@/utils/snowId.js";
 
 const isRegister = ref(false);
 let registerData = ref({
   username: "",
   password: "",
   rePassword: "",
-  code: ""
+  code: "",
+  randKey: ""
 });
 
 const captcha = ref('');
-const code = ref('');
 
 const userCaptcha = async () => {
-  let result = await userCaptchaService();
+  registerData.value.randKey = snowflake.generate();
+  let result = await userCaptchaService(registerData.value.randKey);
   captcha.value = result.data
 }
 
@@ -61,7 +63,14 @@ const register = async (formEl) => {
   if (!formEl) return
   await formEl.validate(async (valid, fields) => {
     if (valid) {
-      let result = await userRegisterService(registerData.value);
+      const jsEncrypt = new JSEncrypt();
+      jsEncrypt.setPublicKey("MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCUT7QkKAk1NHGE0S5eZHir4kvCjGBilXQK2pnAmzuRXi4Byt4Qn1j0zFGpUHr1qH3/VSKMDk77Sx+/UPlsczelzT+oNmmFeY/GbZObIma5caQRnzMMXCsvhhyT2fnb9eMA6IZe+y7ZRRRakhu9BQOrGhdXp3I0eZghMJ7Fe1RE8QIDAQAB");
+      const pwd = jsEncrypt.encrypt(registerData.value.password);
+      const username = jsEncrypt.encrypt(registerData.value.username);
+      let result = await userRegisterService({
+        username: username,
+        password: pwd,
+      });
       ElMessage.success(result.message ? result.message : "注册成功")
       isRegister.value = false;
     }
@@ -76,15 +85,17 @@ const login = async (formEl) => {
   if (!formEl) return
   await formEl.validate(async (valid, fields) => {
     if (valid) {
-      let publicKey = await userPublicKeyService(registerData.value.username);
+      let publicKey = await userPublicKeyService(registerData.value.randKey);
       if (publicKey.code === 0) {
         const jsEncrypt = new JSEncrypt();
         jsEncrypt.setPublicKey(publicKey.data);
         const pwd = jsEncrypt.encrypt(registerData.value.password);
+        const username = jsEncrypt.encrypt(registerData.value.username);
         let result = await userLoginService({
-          username: registerData.value.username,
+          username: username,
           password: pwd,
-          code: registerData.value.code
+          code: registerData.value.code,
+          randKey: registerData.value.randKey
         });
         ElMessage.success(result.message ? result.message : "登录成功")
         tokenStore.setToken(result.data)
