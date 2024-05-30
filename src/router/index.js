@@ -6,6 +6,7 @@ import ArticleManage from "@/views/article/ArticleManage.vue";
 import UserInfo from "@/views/user/UserInfo.vue";
 import UserAvatar from "@/views/user/UserAvatar.vue";
 import UserResetPassword from "@/views/user/UserResetPassword.vue";
+import LogPage from "@/views/log/logPage.vue";
 
 
 let routers = [
@@ -19,7 +20,8 @@ let routers = [
             {path: "/user/avatar", component: UserAvatar},
             {path: "/user/resetPassword", component: UserResetPassword},
             {path: "/article/category", component: ArticleCategory},
-            {path: "/article/manage", component: ArticleManage}
+            {path: "/article/manage", component: ArticleManage},
+            {path: "/log/page", component: LogPage},
         ]
     }
 ];

@@ -104,6 +104,12 @@ const handleCommand = (command) => {
             <span>重置密码</span>
           </el-menu-item>
         </el-sub-menu>
+        <el-menu-item index="/log/page">
+          <el-icon>
+            <Management/>
+          </el-icon>
+          <span>日志</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <!-- 右侧主区域 -->
